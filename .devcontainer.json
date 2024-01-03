@@ -1,0 +1,8 @@
+{
+    "name": "heyyou",
+    "dockerFile": "Dockerfile",
+    // set minimum cpu
+     "hostRequirements": {
+         "cpus": 2
+     }
+}

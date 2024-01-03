@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "parqen"
+version = "0.0.1"
+authors = [
+    { name="Zaid Waqi", email="zaidwaqi@gmail.com" },
+]
+description = "A simple program to read and write encrypted Parquet."
+readme = "README.md"
+license = {text = "GPLv3"}
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/zaidwaqi/parqencr"
+Issues = "https://github.com/pypa/zaidwaqi/parqencr/issues"
+
+[project.scripts]
+parqencr = "parqencr.main:main"
