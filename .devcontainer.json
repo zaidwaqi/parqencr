@@ -1,5 +1,5 @@
 {
-    "name": "heyyou",
+    "name": "parqencr",
     "dockerFile": "Dockerfile",
     // set minimum cpu
      "hostRequirements": {

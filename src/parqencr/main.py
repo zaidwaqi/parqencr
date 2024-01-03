@@ -23,6 +23,8 @@ import os
 import requests
 
 import pyarrow as pa
+import os
+import sys
 import pyarrow.parquet as pq
 import pyarrow.parquet.encryption as pe
 
@@ -61,7 +63,9 @@ class VaultClient(pe.KmsClient):
                    self.kms_connection_config.key_access_token}
         r = requests.post(endpoint + master_key_identifier,
                           headers=headers,
-                          data={'plaintext': base64.b64encode(key_bytes)})
+                          data={'plaintext': base64.b64encode(key_bytes)},
+                          verify=False,
+                          #verify=os.environ.get('VAULT_CACERT', 'true'))
         r.raise_for_status()
         r_dict = r.json()
         wrapped_key = r_dict['data']['ciphertext']
@@ -75,7 +79,9 @@ class VaultClient(pe.KmsClient):
                    self.kms_connection_config.key_access_token}
         r = requests.post(endpoint + master_key_identifier,
                           headers=headers,
-                          data={'ciphertext': wrapped_key})
+                          data={'ciphertext': wrapped_key},
+                          verify=False,
+                          #verify=os.environ.get('VAULT_CACERT', 'true'))
         r.raise_for_status()
         r_dict = r.json()
         plaintext = r_dict['data']['plaintext']
@@ -141,15 +147,16 @@ def parquet_write_read_with_vault(parquet_filename):
 
 
 def main():
+
     parser = argparse.ArgumentParser(
         description="Write and read an encrypted parquet using master keys "
         "managed by Hashicorp Vault.\nBefore using please enable the "
         "transit engine in Vault and set VAULT_URL and VAULT_TOKEN "
         "environment variables.")
     parser.add_argument('--filename', dest='filename', type=str,
-                        default='/tmp/encrypted_table.vault.parquet',
+                        default='encrypted_table.vault.parquet',
                         help='Filename of the parquet file to be created '
-                             '(default: /tmp/encrypted_table.vault.parquet')
+                             '(default: encrypted_table.vault.parquet')
     args = parser.parse_args()
     filename = args.filename
     parquet_write_read_with_vault(filename)

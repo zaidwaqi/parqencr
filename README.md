@@ -9,3 +9,8 @@ Parquet is a popular columnar storage format used in big data processing. PyArro
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+
+## References
+https://github.com/apache/arrow/blob/main/python/examples/dataset/write_dataset_encrypted.py
+https://github.com/apache/arrow/blob/main/python/examples/parquet_encryption/sample_vault_kms_client.py
