@@ -12,13 +12,18 @@ install-vault:
 	@dnf -y install vault
 	@setcap cap_ipc_lock= /usr/bin/vault
 
-initialize-vault-dev:
-	@vault server -dev -dev-root-token-id=B38woSMKwOIJjcwg4mHGmtBDTUJ7ikWe0kCGVnxoJNWnwTyEyE1vckS2CuYbdK9S
+start-vault:
+	@vault server -config=vault.hcl &
 
-initialize-vault:
-	@vault server -config=vault.hcl
+init-vault:
 	@vault operator init
+
+unseal-vault:
 	@vault operator unseal
 
 enable-transit-engine:
 	@vault secrets enable -path=transit transit
+
+delete-vault:
+	@rm -rf vault/
+	@pkill vault

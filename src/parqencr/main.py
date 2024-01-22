@@ -19,12 +19,13 @@
 import argparse
 import base64
 import os
-
+import time
 import requests
 
 import pyarrow as pa
-import os
 import sys
+import subprocess
+import signal
 import pyarrow.parquet as pq
 import pyarrow.parquet.encryption as pe
 
@@ -64,8 +65,7 @@ class VaultClient(pe.KmsClient):
         r = requests.post(endpoint + master_key_identifier,
                           headers=headers,
                           data={'plaintext': base64.b64encode(key_bytes)},
-                          verify=False,
-                          #verify=os.environ.get('VAULT_CACERT', 'true'))
+                          verify=os.environ.get('VAULT_CACERT', 'true'))
         r.raise_for_status()
         r_dict = r.json()
         wrapped_key = r_dict['data']['ciphertext']
@@ -80,8 +80,7 @@ class VaultClient(pe.KmsClient):
         r = requests.post(endpoint + master_key_identifier,
                           headers=headers,
                           data={'ciphertext': wrapped_key},
-                          verify=False,
-                          #verify=os.environ.get('VAULT_CACERT', 'true'))
+                          verify=os.environ.get('VAULT_CACERT', 'true'))
         r.raise_for_status()
         r_dict = r.json()
         plaintext = r_dict['data']['plaintext']
@@ -147,7 +146,47 @@ def parquet_write_read_with_vault(parquet_filename):
 
 
 def main():
+    VAULT_IS_RUNNING = False
+    # Start vault server if not already running
+    # check if process name "vault" is running
+    for line in os.popen("ps ax | grep vault"):
+        fields = line.split()
+        pid = fields[0]
+        process = fields[4]
+        if process == "vault":
+            VAULT_IS_RUNNING = True
+            print("Vault server is already running")
+            break
 
+    if not VAULT_IS_RUNNING:
+        print("Starting vault server")
+        v = subprocess.Popen(["vault", "server", "-config=vault.hcl"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+        time.sleep(3)    
+
+    # Initialize vault if not already initialized, automatically unseal
+    if not os.path.exists("vault/"):
+        print("Initializing vault")
+        p = subprocess.Popen(["vault", "operator", "init"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+        time.sleep(3)
+        out, err = p.communicate()
+
+        unseal_key_file = open("UNSEAL_KEY", "w")
+        root_token_file = open("ROOT_TOKEN", "w")
+        for line in out.decode("utf-8").splitlines():
+            print(line)
+            if line.startswith("Unseal Key"):
+                unseal_key = line.split()[3]
+                print("Unsealing vault with key: " + unseal_key)
+                subprocess.Popen(["vault", "operator", "unseal", unseal_key], stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+                unseal_key_file.write(unseal_key + "\n")
+            if line.startswith("Initial Root Token"):
+                root_token = line.split()[3]
+                root_token_file.write(root_token + "\n")
+        sys.exit(0)
+        unseal_key_file.close()
+        root_token_file.close()
+
+    os.environ["VAULT_CACERT"] = "/workspaces/parqencr/vault.crt"
     parser = argparse.ArgumentParser(
         description="Write and read an encrypted parquet using master keys "
         "managed by Hashicorp Vault.\nBefore using please enable the "
@@ -160,7 +199,8 @@ def main():
     args = parser.parse_args()
     filename = args.filename
     parquet_write_read_with_vault(filename)
-
+    p.send_signal(signal.SIGINT)
+    time.sleep(3)
 
 if __name__ == '__main__':
     main()
